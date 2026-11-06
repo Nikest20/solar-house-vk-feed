@@ -5,14 +5,14 @@
     <link>https://solar-house.pro/</link>
     <description>Отдельная тестовая лента автопубликации сообщества Solar House</description>
     <language>ru-ru</language>
-    <lastBuildDate>Fri, 06 Nov 2026 07:18:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 06 Nov 2026 08:07:39 GMT</lastBuildDate>
     <item>
-      <title>Solar House: проверка автоматической публикации</title>
+      <title>Solar House: новый тест RSS после подключения</title>
       <link>https://solar-house.pro/shale120</link>
-      <guid isPermaLink="false">solar-house-vk-rss-test-2026-11-06-001</guid>
-      <pubDate>Fri, 06 Nov 2026 07:18:00 GMT</pubDate>
-      <description><![CDATA[Проверяем автоматическую публикацию записей в сообщество Solar House через RSS — без ежедневного перевыпуска токенов VK. Это техническая тестовая запись.]]></description>
-      <content:encoded><![CDATA[<p>Проверяем автоматическую публикацию записей в сообщество Solar House через RSS — без ежедневного перевыпуска токенов VK.</p><p>Это техническая тестовая запись.</p><p><img src="https://thb.tildacdn.com/tild3566-6233-4632-a330-376136363336/-/empty/1713501032_2024-04-1.jpg" alt="Проект Шале 120 Solar House" /></p>]]></content:encoded>
+      <guid isPermaLink="false">solar-house-vk-rss-test-2026-11-06-002</guid>
+      <pubDate>Fri, 06 Nov 2026 08:07:39 GMT</pubDate>
+      <description><![CDATA[Второй технический тест RSS после подключения ленты к сообществу Solar House. Проверяем, появится ли новая запись без VK API-токена. Это техническая тестовая запись.]]></description>
+      <content:encoded><![CDATA[<p>Второй технический тест RSS после подключения ленты к сообществу Solar House. Проверяем, появится ли новая запись без VK API-токена.</p><p>Это техническая тестовая запись.</p><p><img src="https://thb.tildacdn.com/tild3566-6233-4632-a330-376136363336/-/empty/1713501032_2024-04-1.jpg" alt="Проект Шале 120 Solar House" /></p>]]></content:encoded>
       <media:content url="https://thb.tildacdn.com/tild3566-6233-4632-a330-376136363336/-/empty/1713501032_2024-04-1.jpg" medium="image" type="image/jpeg" />
     </item>
   </channel>
