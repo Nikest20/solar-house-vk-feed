@@ -163,6 +163,21 @@ try {
         console.log('VK Video: inspecting channel upload form (no file selected)...');
         const uploadEntry = page.getByText('Загрузить видео', { exact: true }).first();
         await uploadEntry.waitFor({ state: 'visible', timeout: 8_000 });
+        const cabinetNetworkIssues = [];
+        let cabinetPageErrors = 0;
+        const onCabinetPage = newPage => {
+          newPage.on('requestfailed', request => {
+            try { cabinetNetworkIssues.push({ kind: 'failed', origin: new URL(request.url()).origin,
+              error: String(request.failure()?.errorText ?? 'unknown').slice(0, 65) }); } catch {}
+          });
+          newPage.on('response', response => {
+            if (response.status() < 400) return;
+            try { cabinetNetworkIssues.push({ kind: 'http', origin: new URL(response.url()).origin,
+              status: response.status() }); } catch {}
+          });
+          newPage.on('pageerror', () => { cabinetPageErrors++; });
+        };
+        context.on('page', onCabinetPage);
         const chooser = page.waitForEvent('filechooser', { timeout: 5_000 })
           .then(() => true).catch(() => false);
         const popup = context.waitForEvent('page', { timeout: 5_000 }).catch(() => null);
@@ -172,7 +187,21 @@ try {
         const fileChooserOpened = await chooser;
         const formPage = popupPage ?? page;
         await formPage.waitForLoadState('domcontentloaded', { timeout: 12_000 }).catch(() => {});
-        await formPage.waitForTimeout(1_200);
+        // VK Video creator cabinet is a separate SPA. Its new tab may be an
+        // entirely grey blank shell for 10–30 seconds after DOMContentLoaded.
+        const deadline = Date.now() + 38_000;
+        let formRender = { text_length: 0, control_count: 0, headings: [] };
+        while (Date.now() < deadline) {
+          await formPage.waitForTimeout(2_000);
+          formRender = await formPage.evaluate(() => ({
+            text_length: (document.body?.innerText || '').trim().length,
+            control_count: document.querySelectorAll('button, input, textarea, [role="button"]').length,
+            headings: Array.from(document.querySelectorAll('h1, h2'))
+              .map(node => (node.innerText || '').trim().slice(0, 75)).filter(Boolean).slice(0, 7),
+          })).catch(() => formRender);
+          if (formRender.text_length > 350 && formRender.control_count > 2) break;
+        }
+        context.off('page', onCabinetPage);
         const formControls = await formPage.locator('input, textarea, select, [role="checkbox"], [role="radio"]').evaluateAll(nodes => nodes
           .slice(0, 50).map(node => ({
             tag: node.tagName.toLowerCase(), type: String(node.getAttribute('type') || '').slice(0, 35),
@@ -198,9 +227,13 @@ try {
         const opened = new URL(formPage.url());
         uploadFormProbe = { file_chooser_opened: fileChooserOpened,
           new_tab_opened: !!popupPage, page: `${opened.origin}${opened.pathname}`,
+          title: (await formPage.title().catch(() => '')).slice(0, 140),
+          render_state: formRender.text_length > 350 && formRender.control_count > 2 ? 'content-present' : 'blank-or-incomplete',
+          render_probe: formRender, page_errors: cabinetPageErrors,
+          network_issues: Array.from(new Map(cabinetNetworkIssues.map(issue => [JSON.stringify(issue), issue])).values()).slice(0, 22),
           form_controls: formControls, action_labels: actionLabels, dialog_labels: dialogLabels,
           screenshot };
-        console.log(`VK Video upload form: chooser=${fileChooserOpened}; new_tab=${!!popupPage}; controls=${formControls.length}; screenshot=${screenshot}`);
+        console.log(`VK Video upload form: state=${uploadFormProbe.render_state}; chooser=${fileChooserOpened}; new_tab=${!!popupPage}; controls=${formControls.length}; issues=${uploadFormProbe.network_issues.length}; screenshot=${screenshot}`);
       } catch (error) {
         uploadFormProbe = { error: String(error.message ?? error).slice(0, 180) };
         console.log(`VK Video upload form: inspection stopped: ${uploadFormProbe.error}`);
