@@ -28,12 +28,13 @@ const result = { mode: 'READ-ONLY', clip_id: clipId, original_status: previousRe
 function save() { fs.writeFileSync(path.join(DIAG, 'result.json'), `${JSON.stringify(result, null, 2)}\n`, 'utf8'); }
 
 let context;
+let page;
 try {
   const { chromium } = await import('playwright');
   context = await chromium.launchPersistentContext(PROFILE, {
     channel: 'chrome', headless: false, viewport: { width: 1380, height: 930 }, locale: 'ru-RU',
   });
-  const page = context.pages()[0] ?? await context.newPage();
+  page = context.pages()[0] ?? await context.newPage();
   page.setDefaultTimeout(25_000);
   console.log(`Checking ${clipId} in Solar House creator cabinet (read only)...`);
   await page.goto(CABINET, { waitUntil: 'commit', timeout: 35_000 });
@@ -70,6 +71,14 @@ try {
   }
 
   await snapshot('cabinet');
+  // The dashboard opens on Overview. "Мой контент" in its sidebar is a
+  // navigation item, not proof that the content tabs have loaded.
+  const myContent = page.getByText('Мой контент', { exact: true }).first();
+  await myContent.click({ timeout: 12_000 });
+  await page.waitForTimeout(2_000);
+  await snapshot('my-content');
+  await page.getByText('Клипы', { exact: true }).first()
+    .waitFor({ state: 'visible', timeout: 22_000 });
   await page.getByText('Клипы', { exact: true }).first().click({ timeout: 10_000 });
   await page.waitForTimeout(2_500);
   await snapshot('clips');
@@ -83,6 +92,12 @@ try {
   console.log('No video file selected; no clip saved, published or deleted.');
 } catch (error) {
   result.error = String(error?.message ?? error).slice(0, 220);
+  if (page) {
+    const failureImage = path.join(DIAG, 'failure.png');
+    await page.screenshot({ path: failureImage, timeout: 12_000 }).catch(() => {});
+    result.failure_screenshot = failureImage;
+    try { const u = new URL(page.url()); result.failure_page = `${u.origin}${u.pathname}`; } catch {}
+  }
   save();
   console.error(`CLIP INSPECTION STOPPED: ${result.error}`);
   console.error(`Diagnostics: ${DIAG}`);
