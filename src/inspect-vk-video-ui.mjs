@@ -32,17 +32,46 @@ try {
   page.setDefaultTimeout(20_000);
   async function inspect(label, url, screenshotName) {
     console.log(`Inspecting ${label} (read only)...`);
+    // Store only network status and host, never request URLs, payloads or credentials.
+    const networkIssues = [];
+    const onRequestFailed = request => {
+      try {
+        networkIssues.push({ kind: 'failed', origin: new URL(request.url()).origin,
+          error: String(request.failure()?.errorText ?? 'unknown').slice(0, 80) });
+      } catch { /* Ignore malformed diagnostic URLs. */ }
+    };
+    const onBadResponse = response => {
+      if (response.status() < 400) return;
+      try {
+        networkIssues.push({ kind: 'http', origin: new URL(response.url()).origin, status: response.status() });
+      } catch { /* Ignore malformed diagnostic URLs. */ }
+    };
+    page.on('requestfailed', onRequestFailed);
+    page.on('response', onBadResponse);
     try { await page.goto(url, { waitUntil: 'commit', timeout: 30_000 }); }
     catch { console.log(`${label}: navigation is slow, waiting for page content...`); }
-    // VK Video initially renders a completely grey skeleton. Waiting just 4s
-    // produces a false "no upload button" result; wait for actual content.
-    const until = Date.now() + 26_000;
-    let textLength = 0;
+    // VK's sidebar alone can have 269–533 characters while the main page is
+    // completely grey. Never mistake this for a loaded video/community page.
+    const until = Date.now() + 30_000;
+    let probe = { text_length: 0, headings: [], visible_skeletons: 0 };
     while (Date.now() < until) {
       await page.waitForTimeout(2_000);
-      textLength = await page.locator('body').evaluate(node => (node.innerText || '').trim().length)
-        .catch(() => 0);
-      if (textLength >= (label === 'VK Video' ? 180 : 260)) break;
+      probe = await page.evaluate(() => {
+        const visible = node => {
+          const r = node.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        };
+        return {
+          text_length: (document.body?.innerText || '').trim().length,
+          headings: Array.from(document.querySelectorAll('h1, h2')).filter(visible)
+            .slice(0, 8).map(node => (node.innerText || '').trim().slice(0, 80)),
+          visible_skeletons: Array.from(document.querySelectorAll('[class*="keleton" i], [aria-busy="true"]'))
+            .filter(visible).length,
+        };
+      }).catch(() => probe);
+      // This generous threshold is intentional. In the attached screenshots,
+      // both pages had only the navigation shell, not actual group content.
+      if (probe.text_length >= (label === 'VK Video' ? 900 : 1_200) && probe.visible_skeletons === 0) break;
     }
     // Only labels and safe public paths. Never save response bodies, cookies,
     // tokens, HTML, network logs or arbitrary page content.
@@ -58,17 +87,26 @@ try {
         path: (() => { try { const u = new URL(node.href); return u.pathname.slice(0, 150); } catch { return ''; } })() })))
       .catch(() => []);
     const pageUrl = new URL(page.url());
+    page.off('requestfailed', onRequestFailed);
+    page.off('response', onBadResponse);
+    const uniqueIssues = Array.from(new Map(networkIssues.map(issue => [JSON.stringify(issue), issue])).values()).slice(0, 20);
+    const isLoaded = probe.text_length >= (label === 'VK Video' ? 900 : 1_200)
+      && probe.visible_skeletons === 0;
     const state = {
       label, page: `${pageUrl.origin}${pageUrl.pathname}`,
       title: (await page.title().catch(() => '')).slice(0, 140),
-      text_length: textLength, render_state: textLength < 180 ? 'possibly-still-loading' : 'content-present',
+      text_length: probe.text_length,
+      render_state: isLoaded ? 'content-present' : 'skeleton-or-incomplete',
+      visible_skeletons: probe.visible_skeletons,
+      headings: probe.headings,
+      network_issues: uniqueIssues,
       buttons, relevant_links: relevantLinks,
       upload_trigger_candidates: buttons.filter(value => /видео|загруз|добавить/i.test(value)),
       screenshot: path.join(DIAG, screenshotName),
     };
     try { await page.screenshot({ path: state.screenshot, timeout: 15_000 }); }
     catch { state.screenshot = 'not-captured'; }
-    console.log(`${label}: ${state.page}; text_length=${textLength}; visible candidates=${state.upload_trigger_candidates.join(' | ') || 'none'}`);
+    console.log(`${label}: ${state.page}; state=${state.render_state}; text_length=${probe.text_length}; skeletons=${probe.visible_skeletons}; network issues=${uniqueIssues.length}; visible candidates=${state.upload_trigger_candidates.join(' | ') || 'none'}`);
     console.log(`${label} screenshot: ${state.screenshot}`);
     return state;
   }
