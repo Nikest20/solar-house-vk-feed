@@ -1,5 +1,6 @@
 // Read-only inspection of the logged-in community VIDEO upload interface.
-// Does not click upload, choose a file, save a video, or publish a wall post.
+// May open the two "Add" menus, but never chooses a file, saves a video,
+// starts an upload, or publishes a wall post.
 // Diagnostics are local to the owner's Windows account, never pushed to GitHub.
 import os from 'node:os';
 import fs from 'node:fs';
@@ -112,10 +113,53 @@ try {
   }
 
   const videoPage = await inspect('VK Video', VIDEO_URL, 'video-page.png');
+  const addMenuProbes = [];
+  if (videoPage.render_state === 'content-present') {
+    const addButtons = page.getByRole('button', { name: 'Добавить', exact: true });
+    const addCount = Math.min(await addButtons.count().catch(() => 0), 2);
+    console.log(`VK Video: inspecting ${addCount} Add menu(s) without selecting any file...`);
+    for (let i = 0; i < addCount; i++) {
+      try {
+        if (i > 0) {
+          await page.goto(videoPage.page, { waitUntil: 'commit', timeout: 30_000 });
+          await page.getByRole('button', { name: 'Добавить', exact: true }).nth(i)
+            .waitFor({ state: 'visible', timeout: 30_000 });
+        }
+        // Playwright intercepts any native file chooser. Never call setFiles().
+        const chooser = page.waitForEvent('filechooser', { timeout: 4_000 })
+          .then(() => true).catch(() => false);
+        await page.getByRole('button', { name: 'Добавить', exact: true }).nth(i)
+          .click({ timeout: 8_000 });
+        await page.waitForTimeout(800);
+        const fileChooserOpened = await chooser;
+        const actionLabels = await page.locator('button, [role="menuitem"], a').evaluateAll(nodes => nodes
+          .filter(node => {
+            const r = node.getBoundingClientRect();
+            return r.width > 0 && r.height > 0;
+          })
+          .map(node => (node.getAttribute('aria-label') || node.innerText || node.title || '').trim().slice(0, 95))
+          .filter(value => /загруз|добавить|создать|видео|клип|файл/i.test(value))
+          .slice(0, 35)).catch(() => []);
+        const inputs = await page.locator('input[type="file"]').evaluateAll(nodes => nodes.map(node => ({
+          accept: String(node.accept || '').slice(0, 70), multiple: !!node.multiple,
+        }))).catch(() => []);
+        const screenshot = path.join(DIAG, `video-add-menu-${i + 1}.png`);
+        await page.screenshot({ path: screenshot, timeout: 15_000 }).catch(() => {});
+        const openedUrl = new URL(page.url());
+        addMenuProbes.push({ index: i + 1, file_chooser_opened: fileChooserOpened,
+          page: `${openedUrl.origin}${openedUrl.pathname}`, action_labels: actionLabels,
+          file_inputs: inputs, screenshot });
+        console.log(`VK Video Add #${i + 1}: chooser=${fileChooserOpened}; actions=${actionLabels.join(' | ') || 'none'}; screenshot=${screenshot}`);
+      } catch (error) {
+        addMenuProbes.push({ index: i + 1, error: String(error.message ?? error).slice(0, 130) });
+        console.log(`VK Video Add #${i + 1}: menu inspection unavailable; continuing.`);
+      }
+    }
+  }
   const communityPage = await inspect('VK community', COMMUNITY_URL, 'community-page.png');
   const diagnostics = {
     mode: 'READ-ONLY', community_id: GROUP_ID,
-    pages: [videoPage, communityPage],
+    pages: [videoPage, communityPage], add_menu_probes: addMenuProbes,
     inspected_at: new Date().toISOString(),
   };
   fs.writeFileSync(path.join(DIAG, 'result.json'), JSON.stringify(diagnostics, null, 2) + '\n', 'utf8');
