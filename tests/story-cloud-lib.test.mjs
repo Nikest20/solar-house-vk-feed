@@ -17,8 +17,9 @@ test('approved story is not due before its Moscow publish time', () => {
   assert.equal(storiesDue([story], new Date('2026-11-18T07:15:00Z')).length, 1);
 });
 
-test('draft is never due and paths outside drafts are rejected', () => {
+test('draft is never due and unsafe story paths are rejected', () => {
   assert.equal(storiesDue([validateStory({ ...approved, status: 'draft' })], new Date('2027-01-01')).length, 0);
+  assert.equal(validateStory({ ...approved, image: 'media/story-terrace.jpg' }).image, 'media/story-terrace.jpg');
   assert.throws(() => validateStory({ ...approved, image: '../private.jpg' }), /Invalid image path/);
   assert.throws(() => validateStory({ ...approved, image_sha256: 'wrong' }), /Missing image digest/);
 });

@@ -3,7 +3,8 @@
 Отдельный от стены издатель: `.github/workflows/vk-stories-cloud.yml`.
 
 - Истории публикуются **только** с `status: approved` и после `publish_at`.
-- Связанная запись на стене должна иметь подтверждённый журнал `published`.
+- Связанная запись на стене должна иметь подтверждённый журнал `published`:
+  `cloud-publisher-state/` для фото или `cloud-video-state/` для видео.
 - Хэш изображения должен совпадать с `image_sha256`.
 - Требуется отдельная переменная GitHub Actions `VK_STORIES_ENABLED=true`.
 - Перед VK API вызывается push состояния `story-outcome-uncertain`; если ответ

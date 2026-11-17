@@ -18,7 +18,7 @@ export function validateStory(raw) {
   if (!Number.isFinite(publishedAt.getTime())) throw new Error(`Invalid date ${raw.id}`);
   if (!ID_PATTERN.test(raw.linked_wall_post_id ?? '')) throw new Error(`Invalid wall reference ${raw.id}`);
   if (typeof raw.image !== 'string' ||
-      !/^drafts\/[a-zA-Z0-9][a-zA-Z0-9._-]*\.(jpg|jpeg|png)$/.test(raw.image)) {
+      !/^(?:drafts|media)\/[a-zA-Z0-9][a-zA-Z0-9._-]*\.(jpg|jpeg|png)$/.test(raw.image)) {
     throw new Error(`Invalid image path ${raw.id}`);
   }
   if (typeof raw.image_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(raw.image_sha256)) {

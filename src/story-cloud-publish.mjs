@@ -11,12 +11,16 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const STORY_QUEUE = path.join(ROOT, 'stories-queue');
 const STORY_LEDGER = path.join(ROOT, 'cloud-story-state');
 const WALL_LEDGER = path.join(ROOT, 'cloud-publisher-state');
+const VIDEO_WALL_LEDGER = path.join(ROOT, 'cloud-video-state');
 const MODE = process.argv.includes('--mode') ? process.argv[process.argv.indexOf('--mode') + 1] : 'preview';
 if (!['preview', 'live'].includes(MODE)) throw new Error('Allowed modes: preview and live');
 
 function readJson(filename) { return fs.existsSync(filename) ? JSON.parse(fs.readFileSync(filename, 'utf8')) : null; }
 function storyStatePath(id) { return path.join(STORY_LEDGER, `${id}.json`); }
-function wallStatePath(id) { return path.join(WALL_LEDGER, `${id}.json`); }
+function wallState(id) {
+  return readJson(path.join(WALL_LEDGER, `${id}.json`)) ??
+    readJson(path.join(VIDEO_WALL_LEDGER, `${id}.json`));
+}
 function git(args) {
   try { execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
   catch { throw new Error('GitHub journal push failed; do not retry without manual review'); }
@@ -51,7 +55,7 @@ async function main() {
   console.log(`Mode=${MODE}; queue=${stories.length}; due=${storiesDue(stories).length}`);
   if (MODE === 'preview') {
     for (const item of stories) {
-      const wall = readJson(wallStatePath(item.linked_wall_post_id));
+      const wall = wallState(item.linked_wall_post_id);
       const state = readJson(storyStatePath(item.id));
       console.log(`${item.id}: ${item.status}; wall=${wall?.status ?? 'pending'}; story=${state?.status ?? 'not-started'}`);
     }
@@ -75,7 +79,7 @@ async function main() {
       console.error(`${item.id}: previous outcome ${state.status} requires manual review; no repeat`);
       continue;
     }
-    const wall = readJson(wallStatePath(item.linked_wall_post_id));
+    const wall = wallState(item.linked_wall_post_id);
     if (wall?.status !== 'published') {
       console.log(`${item.id}: wall post not confirmed published; story deferred`);
       continue;

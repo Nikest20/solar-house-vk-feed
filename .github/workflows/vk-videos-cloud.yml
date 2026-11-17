@@ -1,0 +1,56 @@
+name: Solar House VK — cloud video staging and publication (separate opt-in)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'preview has no external effects; live needs user token and enable flags'
+        type: choice
+        options:
+          - preview
+          - live
+        default: preview
+  schedule:
+    - cron: '3,18,33,48 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: solar-house-vk-cloud-video
+  cancel-in-progress: false
+
+jobs:
+  cloud-video:
+    if: github.event_name == 'workflow_dispatch' || vars.VK_VIDEO_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare GitHub identity for one-shot journal
+        run: |
+          git config user.name 'solar-house-vk-bot'
+          git config user.email 'solar-house-vk-bot@users.noreply.github.com'
+      - name: Validate video and story queue without contacting VK
+        run: |
+          node --test tests/*.test.mjs
+          node src/video-cloud-publish.mjs --mode preview
+          node src/story-cloud-publish.mjs --mode preview
+      - name: Stage or publish one approved due video
+        env:
+          VK_VIDEO_USER_TOKEN: ${{ secrets.VK_VIDEO_USER_TOKEN }}
+          VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
+          VK_VIDEO_ENABLED: ${{ vars.VK_VIDEO_ENABLED }}
+          VK_PUBLISH_ENABLED: ${{ vars.VK_PUBLISH_ENABLED }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_MODE: ${{ github.event.inputs.mode }}
+        run: |
+          MODE='preview'
+          if [[ "$EVENT_NAME" == 'schedule' ]]; then MODE='live'; fi
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' && "$WORKFLOW_MODE" == 'live' ]]; then MODE='live'; fi
+          node src/video-cloud-publish.mjs --mode "$MODE"
