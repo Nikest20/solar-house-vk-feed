@@ -15,4 +15,4 @@ $node = (Get-Command node -ErrorAction Stop).Source
 $mode = if ($Upload) { '--stage' } else { '--check' }
 Write-Host "SOLAR HOUSE VK Video: $mode; no wall post."
 & $node (Join-Path $repo 'src\stage-vk-video-ui.mjs') $mode
-if ($LASTEXITCODE -ne 0) { throw 'Video staging stopped. Do not retry after file selection without reviewing the journal.' }
+if ($LASTEXITCODE -ne 0) { throw 'Video staging stopped. Review the output; after actual file selection, do not retry without checking the journal.' }
