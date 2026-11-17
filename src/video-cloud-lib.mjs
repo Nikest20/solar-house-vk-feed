@@ -17,9 +17,7 @@ export function validateVideo(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Expected video object');
   if (!/^[a-z0-9][a-z0-9_-]{2,63}$/.test(raw.id ?? '')) throw new Error('Invalid video id');
   if (!['draft', 'approved'].includes(raw.status)) throw new Error(`${raw.id}: invalid status`);
-  const upload = strictDate(raw.upload_not_before, 'upload_not_before');
   const due = strictDate(raw.publish_at, 'publish_at');
-  if (+upload > +due) throw new Error(`${raw.id}: upload_not_before must be before publish_at`);
   if (typeof raw.title !== 'string' || raw.title.trim().length < 4 || raw.title.length > 100) {
     throw new Error(`${raw.id}: invalid video title`);
   }
@@ -30,7 +28,7 @@ export function validateVideo(raw) {
     throw new Error(`${raw.id}: MP4 must be a flat file under media/`);
   }
   if (!/^[a-f0-9]{64}$/.test(raw.file_sha256 ?? '')) throw new Error(`${raw.id}: missing file hash`);
-  return { ...raw, upload, due };
+  return { ...raw, due };
 }
 
 export function videosToPost(items, now = new Date()) {
