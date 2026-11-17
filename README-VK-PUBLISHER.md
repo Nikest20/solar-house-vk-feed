@@ -1,7 +1,8 @@
 # Solar House — VK cloud publisher (disabled by default)
 
-This public repository also contains the existing `feed.xml`. The VK publisher is
-independent of that RSS file: do not overwrite or delete `feed.xml`.
+This repository previously hosted a test RSS feed in `feed.xml`. That obsolete
+feed was removed at the owner's request. The current solution uses GitHub
+Actions to publish approved and pre-staged posts directly through the VK API.
 
 ## Current setup
 
