@@ -114,6 +114,7 @@ try {
 
   const videoPage = await inspect('VK Video', VIDEO_URL, 'video-page.png');
   const addMenuProbes = [];
+  let uploadFormProbe = null;
   if (videoPage.render_state === 'content-present') {
     const addButtons = page.getByRole('button', { name: 'Добавить', exact: true });
     const addCount = Math.min(await addButtons.count().catch(() => 0), 2);
@@ -155,11 +156,62 @@ try {
         console.log(`VK Video Add #${i + 1}: menu inspection unavailable; continuing.`);
       }
     }
+    // The second Add button belongs to the Solar House channel. Open its
+    // "Upload video" entry to inspect the form, but NEVER provide a filename.
+    if (addCount === 2 && addMenuProbes.some(result => result.index === 2 && !result.error)) {
+      try {
+        console.log('VK Video: inspecting channel upload form (no file selected)...');
+        const uploadEntry = page.getByText('Загрузить видео', { exact: true }).first();
+        await uploadEntry.waitFor({ state: 'visible', timeout: 8_000 });
+        const chooser = page.waitForEvent('filechooser', { timeout: 5_000 })
+          .then(() => true).catch(() => false);
+        const popup = context.waitForEvent('page', { timeout: 5_000 }).catch(() => null);
+        await uploadEntry.click({ timeout: 8_000 });
+        await page.waitForTimeout(1_500);
+        const popupPage = await popup;
+        const fileChooserOpened = await chooser;
+        const formPage = popupPage ?? page;
+        await formPage.waitForLoadState('domcontentloaded', { timeout: 12_000 }).catch(() => {});
+        await formPage.waitForTimeout(1_200);
+        const formControls = await formPage.locator('input, textarea, select, [role="checkbox"], [role="radio"]').evaluateAll(nodes => nodes
+          .slice(0, 50).map(node => ({
+            tag: node.tagName.toLowerCase(), type: String(node.getAttribute('type') || '').slice(0, 35),
+            placeholder: String(node.getAttribute('placeholder') || '').slice(0, 90),
+            label: String(node.getAttribute('aria-label') || '').slice(0, 90),
+            accept: String(node.getAttribute('accept') || '').slice(0, 65),
+            checked: node.matches('[type="checkbox"], [role="checkbox"]') ? !!(node.checked || node.getAttribute('aria-checked') === 'true') : undefined,
+          }))).catch(() => []);
+        const actionLabels = await formPage.locator('button, [role="button"], [role="menuitem"]').evaluateAll(nodes => nodes
+          .filter(node => {
+            const r = node.getBoundingClientRect();
+            return r.width > 0 && r.height > 0;
+          })
+          .map(node => String(node.getAttribute('aria-label') || node.innerText || '').trim().slice(0, 100))
+          .filter(Boolean).slice(0, 55)).catch(() => []);
+        const dialogLabels = await formPage.locator('[role="dialog"], dialog').evaluateAll(nodes => nodes
+          .filter(node => {
+            const r = node.getBoundingClientRect();
+            return r.width > 0 && r.height > 0;
+          }).map(node => String(node.innerText || '').slice(0, 900)).slice(0, 3)).catch(() => []);
+        const screenshot = path.join(DIAG, 'video-upload-form.png');
+        await formPage.screenshot({ path: screenshot, timeout: 15_000 }).catch(() => {});
+        const opened = new URL(formPage.url());
+        uploadFormProbe = { file_chooser_opened: fileChooserOpened,
+          new_tab_opened: !!popupPage, page: `${opened.origin}${opened.pathname}`,
+          form_controls: formControls, action_labels: actionLabels, dialog_labels: dialogLabels,
+          screenshot };
+        console.log(`VK Video upload form: chooser=${fileChooserOpened}; new_tab=${!!popupPage}; controls=${formControls.length}; screenshot=${screenshot}`);
+      } catch (error) {
+        uploadFormProbe = { error: String(error.message ?? error).slice(0, 180) };
+        console.log(`VK Video upload form: inspection stopped: ${uploadFormProbe.error}`);
+      }
+    }
   }
   const communityPage = await inspect('VK community', COMMUNITY_URL, 'community-page.png');
   const diagnostics = {
     mode: 'READ-ONLY', community_id: GROUP_ID,
     pages: [videoPage, communityPage], add_menu_probes: addMenuProbes,
+    upload_form_probe: uploadFormProbe,
     inspected_at: new Date().toISOString(),
   };
   fs.writeFileSync(path.join(DIAG, 'result.json'), JSON.stringify(diagnostics, null, 2) + '\n', 'utf8');
