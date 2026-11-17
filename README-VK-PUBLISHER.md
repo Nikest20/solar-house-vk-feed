@@ -28,10 +28,44 @@ Each *explicitly approved* post can be stored as a JSON object under `queue/`.
 The text and schedule will be publicly visible before the scheduled time;
 **do not place private drafts or confidential client information in this repo**.
 
-The Windows staging stage runs from the interactive `MSI\\nstud` session. It
+The Windows staging stage runs from the owner's interactive Windows session. It
 uploads the approved image to the community photo album ahead of time and
 records its verified `photo_attachment`, image hash, and content hash in the
 queue. It **does not post to the wall**. The Windows computer can then be off.
+
+### One-time Windows setup (no GitHub CLI)
+
+Git for Windows, Node.js 22+, Chrome and the existing `SolarHouseVkAuto`
+Playwright profile are prerequisites. In an ordinary (non-administrator)
+PowerShell session, clone the repository once under the existing working folder:
+
+```powershell
+git clone https://github.com/Nikest20/solar-house-vk-feed.git "$env:USERPROFILE\SolarHouseVK\publisher-cloud"
+& "$env:USERPROFILE\SolarHouseVK\publisher-cloud\Setup-VK-Staging.ps1"
+```
+
+The setup checks local prerequisites, reads the queue in preview, and checks
+GitHub write access using `git push --dry-run` (may open browser auth). It then
+registers a user-session Scheduled Task for login and hourly staging, **disabled
+by default**. It never uploads a photo or posts to the wall while installing.
+
+After a separate approval, enable photo staging:
+
+```powershell
+& "$env:USERPROFILE\SolarHouseVK\publisher-cloud\Enable-VK-Staging.ps1"
+```
+
+To stop photo staging without touching the wall publisher:
+
+```powershell
+& "$env:USERPROFILE\SolarHouseVK\publisher-cloud\Disable-VK-Staging.ps1"
+```
+
+The task runs only when that user is signed in, not through the old
+`NETWORK SERVICE` GitHub Runner. It first does a fast-forward Git pull, and
+when approved images are present under `media/`, it stages at most 3 per run.
+Uploaded photo IDs are committed and pushed to GitHub. Any uncertain outcome
+requires manual review instead of an automatic duplicate upload.
 
 With `VK_PUBLISH_ENABLED=true`, scheduled GitHub-hosted Actions runs may
 publish one due approved staged post per invocation. A one-shot journal is

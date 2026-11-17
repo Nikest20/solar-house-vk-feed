@@ -56,7 +56,21 @@ jobs:
           fi
       - name: Validate queue logic
         shell: bash
-        run: node --test tests/*.test.mjs
+        run: |
+          node --test tests/*.test.mjs
+          node src/upload-vk-photo.mjs --self-test
+          node src/offline-stage.mjs --mode preview
+      - name: Check PowerShell installer syntax
+        shell: pwsh
+        run: |
+          $files = @('Setup-VK-Staging.ps1', 'Sync-VK-Staging.ps1', 'Enable-VK-Staging.ps1', 'Disable-VK-Staging.ps1')
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$tokens, [ref]$errors)
+            if ($errors.Count) { throw "PowerShell syntax error in $file : $($errors -join '; ')" }
+            Write-Host "Syntax OK: $file"
+          }
       - name: Publish one already-prepared approved post
         env:
           VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
