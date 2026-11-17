@@ -4,7 +4,6 @@ import { validateVideo, videosToPost, publishVideoWallPost, videoSha256 } from '
 
 const video = {
   id: 'solar-house-terrace-20261119', status: 'approved',
-  upload_not_before: '2026-11-18T08:00:00+03:00',
   publish_at: '2026-11-19T10:00:00+03:00',
   title: 'Терраса? Да зачем она нам!',
   text: 'Терраса объединяет семью и друзей.',
@@ -23,7 +22,7 @@ test('video queue validates paths and immutable file hash', () => {
   assert.throws(() => validateVideo({ ...video, file: 'media/nested/secret.mp4' }), /MP4/);
   assert.throws(() => validateVideo({ ...video, file_sha256: 'broken' }), /hash/);
   assert.throws(() => validateVideo({ ...video, status: 'published' }), /status/);
-  assert.throws(() => validateVideo({ ...video, upload_not_before: '2026-11-20T00:00:00+03:00' }), /before/);
+  assert.throws(() => validateVideo({ ...video, publish_at: '2026-11-19T10:00:00' }), /timezone/);
   assert.equal(videoSha256(Buffer.from('test')).length, 64);
 });
 
