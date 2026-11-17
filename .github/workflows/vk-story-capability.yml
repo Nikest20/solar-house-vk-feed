@@ -1,0 +1,23 @@
+name: Solar House VK — check stories access (NO PUBLISH)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe-stories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify the probe without connecting to VK
+        run: node --test tests/probe-stories.test.mjs
+      - name: Check group story eligibility without publishing
+        env:
+          VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
+        run: node src/probe-stories.mjs
