@@ -30,7 +30,7 @@ if (videoSha256(bytes) !== video.file_sha256) throw new Error('Approved MP4 hash
 const JOURNAL = path.join(STAGING, `${video.id}.json`);
 if (mode === 'check') {
   console.log(`SOLAR HOUSE VK VIDEO: mode=check; approved=${video.status === 'approved'}; file_hash=ok`);
-  console.log(`Video: ${video.file}; bytes=${bytes.length}; staging_not_before=${raw.upload_not_before}`);
+  console.log(`Video: ${video.file}; bytes=${bytes.length}; browser_staging=available_now_if_approved`);
   console.log(`Current time: ${new Date().toISOString()}; prior_attempt=${fs.existsSync(JOURNAL)}`);
   console.log('CHECK ONLY: no Chrome, VK upload or wall post.');
   process.exit(0);
@@ -85,7 +85,7 @@ try {
   // even if Playwright crashes, VK times out, or the response is uncertain.
   const journal = { video_id: video.id, state: 'upload-outcome-uncertain',
     selected_at_utc: new Date().toISOString(), file_sha256: video.file_sha256,
-    upload_window: raw.upload_not_before, diagnostics: OUTPUT };
+    approval_status: video.status, diagnostics: OUTPUT };
   fs.mkdirSync(STAGING, { recursive: true });
   fs.writeFileSync(JOURNAL, `${JSON.stringify(journal, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
   console.log('Selecting approved MP4 ONCE for VK Video upload (no Publish/Save/Next)...');
