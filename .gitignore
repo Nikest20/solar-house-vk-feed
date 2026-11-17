@@ -1,0 +1,4 @@
+node_modules/
+publisher.local.json
+*.tmp
+*.log
