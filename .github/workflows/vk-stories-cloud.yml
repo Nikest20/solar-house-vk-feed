@@ -1,0 +1,54 @@
+name: Solar House VK — stories cloud publisher (separate opt-in)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'preview is read-only; live requires VK_STORIES_ENABLED=true'
+        type: choice
+        options:
+          - preview
+          - live
+        default: preview
+  schedule:
+    # At :18 after the wall publisher can publish at :03.
+    - cron: '3,18,33,48 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: solar-house-vk-cloud-story
+  cancel-in-progress: false
+
+jobs:
+  cloud-story:
+    if: github.event_name == 'workflow_dispatch' || vars.VK_STORIES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare git identity for immutable story journal
+        run: |
+          git config user.name 'solar-house-vk-bot'
+          git config user.email 'solar-house-vk-bot@users.noreply.github.com'
+      - name: Verify queue, upload/save sequence and one-shot safeguards
+        run: |
+          node --test tests/*.test.mjs
+          node src/story-cloud-publish.mjs --mode preview
+      - name: Publish one approved due story only when separately enabled
+        env:
+          VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
+          VK_STORIES_ENABLED: ${{ vars.VK_STORIES_ENABLED }}
+          WORKFLOW_MODE: ${{ github.event.inputs.mode }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          MODE='preview'
+          if [[ "$EVENT_NAME" == 'schedule' ]]; then MODE='live'; fi
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' && "$WORKFLOW_MODE" == 'live' ]]; then MODE='live'; fi
+          node src/story-cloud-publish.mjs --mode "$MODE"
