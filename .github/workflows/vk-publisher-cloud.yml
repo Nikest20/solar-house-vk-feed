@@ -1,0 +1,71 @@
+name: Solar House VK — cloud publisher (PC may be off)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'preview is read-only; live needs approval and secrets'
+        type: choice
+        options:
+          - preview
+          - live
+        default: preview
+  schedule:
+    # Every 15 minutes, shifted away from the busy start of the hour.
+    - cron: '3,18,33,48 * * * *'
+
+permissions:
+  contents: write   # One-shot remote ledger MUST be pushed before wall.post.
+
+concurrency:
+  group: solar-house-vk-cloud-post
+  cancel-in-progress: false
+
+jobs:
+  cloud-publisher:
+    if: github.event_name == 'workflow_dispatch' || vars.VK_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare git identity for journal updates
+        shell: bash
+        run: |
+          git config user.name "solar-house-vk-bot"
+          git config user.email "solar-house-vk-bot@users.noreply.github.com"
+      - name: Check configuration without revealing the secret
+        shell: bash
+        env:
+          VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
+          VK_PUBLISH_ENABLED: ${{ vars.VK_PUBLISH_ENABLED }}
+        run: |
+          if [[ -n "$VK_GROUP_TOKEN" ]]; then
+            echo 'VK_GROUP_TOKEN: configured'
+          else
+            echo 'VK_GROUP_TOKEN: missing'
+          fi
+          if [[ "$VK_PUBLISH_ENABLED" == 'true' ]]; then
+            echo 'Live publication switch: enabled'
+          else
+            echo 'Live publication switch: disabled'
+          fi
+      - name: Validate queue logic
+        shell: bash
+        run: node --test tests/*.test.mjs
+      - name: Publish one already-prepared approved post
+        env:
+          VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
+          VK_PUBLISH_ENABLED: ${{ vars.VK_PUBLISH_ENABLED }}
+          WORKFLOW_MODE: ${{ github.event.inputs.mode }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          MODE="preview"
+          if [[ "$EVENT_NAME" == "schedule" ]]; then MODE="live"; fi
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$WORKFLOW_MODE" == "live" ]]; then MODE="live"; fi
+          node src/offline-publish.mjs --mode "$MODE"
