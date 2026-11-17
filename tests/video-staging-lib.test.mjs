@@ -5,7 +5,6 @@ import { validateVideo } from '../src/video-cloud-lib.mjs';
 
 const prepared = {
   id: 'solar-house-terrace-20261119', status: 'approved',
-  upload_not_before: '2026-11-18T08:00:00+03:00',
   publish_at: '2026-11-19T10:00:00+03:00',
   title: 'Solar House terrace', text: 'Our terrace is a place for friends.',
   file: 'media/solar-house-terrace-2026-11-19.mp4',
