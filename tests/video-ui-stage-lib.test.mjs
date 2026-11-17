@@ -6,13 +6,12 @@ import { videoSha256 } from '../src/video-cloud-lib.mjs';
 const bytes = Buffer.from('approved video bytes');
 const approved = {
   id: 'solar-house-terrace-20261119', status: 'approved',
-  upload_not_before: '2026-11-18T08:00:00+03:00',
   publish_at: '2026-11-19T10:00:00+03:00',
   title: 'Solar House terrace', text: 'Approved terrace clip and caption',
   file: 'media/solar-house-terrace-2026-11-19.mp4', file_sha256: videoSha256(bytes),
 };
-test('staging is blocked until the approved upload time', () => {
-  assert.throws(() => videoEligibleForBrowserStage(approved, bytes, new Date('2026-11-17T20:00:00+03:00')), /not allowed before/);
+test('staging is available immediately after approval, before publication', () => {
+  assert.equal(videoEligibleForBrowserStage(approved, bytes, new Date('2026-11-17T20:00:00+03:00')).id, approved.id);
 });
 test('one approved unchanged video may be selected inside the staging window', () => {
   assert.equal(videoEligibleForBrowserStage(approved, bytes, new Date('2026-11-18T09:00:00+03:00')).id, approved.id);
