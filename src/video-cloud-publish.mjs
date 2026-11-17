@@ -1,14 +1,12 @@
-// Solar House: two-phase scheduled VK community VIDEO publisher.
-// First stage video without a wall post. Later post once it's encoded and due.
-// Never retry an uncertain upload/wall.post. GitHub journal is durable before API effects.
+// Cloud-only publication of videos ALREADY uploaded using the owner's Chrome.
+// No user VK token. No VK video.save. The community video ID is approved,
+// pinned in the queue and checked before exactly one wall.post.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import {
-  validateVideo, videoSha256, videosToUpload, videosToPost,
-  uploadCommunityVideo, isCommunityVideoReady, publishVideoWallPost,
-} from './video-cloud-lib.mjs';
+import { validateVideo, videoSha256, videosToPost, publishVideoWallPost } from './video-cloud-lib.mjs';
+import { preparedVideoAttachment } from './video-staging-lib.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const QUEUE = path.join(ROOT, 'videos-queue');
@@ -19,137 +17,95 @@ if (!['preview', 'live'].includes(MODE)) throw new Error('Allowed modes: preview
 function readJson(file) { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null; }
 function ledgerPath(id) { return path.join(LEDGER, `${id}.json`); }
 
-function git(args) {
-  try { execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
-  catch { throw new Error('GitHub journal push failed. Never retry without manual ledger review.'); }
-}
-
 function saveAndPush(state, branch, action) {
   fs.mkdirSync(LEDGER, { recursive: true });
-  const file = ledgerPath(state.post_id);
-  const temp = `${file}.${process.pid}.tmp`;
+  const filename = ledgerPath(state.post_id);
+  const temp = `${filename}.${process.pid}.tmp`;
   fs.writeFileSync(temp, JSON.stringify(state, null, 2) + '\n', 'utf8');
-  fs.renameSync(temp, file);
-  git(['add', '--', path.relative(ROOT, file).replaceAll('\\', '/')]);
-  git(['commit', '-m', `VK: video ${action} ${state.post_id}`]);
-  git(['push', 'origin', `HEAD:refs/heads/${branch}`]);
+  fs.renameSync(temp, filename);
+  const relative = path.relative(ROOT, filename).replaceAll('\\', '/');
+  try {
+    execFileSync('git', ['add', '--', relative], { cwd: ROOT, stdio: 'pipe' });
+    execFileSync('git', ['commit', '-m', `VK: video ${action} ${state.post_id}`], { cwd: ROOT, stdio: 'pipe' });
+    execFileSync('git', ['push', 'origin', `HEAD:refs/heads/${branch}`], { cwd: ROOT, stdio: 'pipe' });
+  } catch {
+    throw new Error('Cannot push safety ledger. Do not retry wall.post without manual review.');
+  }
 }
 
 function loadVideos() {
   if (!fs.existsSync(QUEUE)) return [];
   const names = fs.readdirSync(QUEUE).filter(name => name.endsWith('.json')).sort();
-  const videos = names.map(file => validateVideo(JSON.parse(fs.readFileSync(path.join(QUEUE, file), 'utf8'))));
-  if (new Set(videos.map(item => item.id)).size !== videos.length) throw new Error('Duplicate video queue IDs');
+  const videos = names.map(name => validateVideo(JSON.parse(fs.readFileSync(path.join(QUEUE, name), 'utf8'))));
+  if (new Set(videos.map(v => v.id)).size !== videos.length) throw new Error('Duplicate queue video IDs');
   return videos;
 }
 
-function bytesAndDigest(item) {
-  const filePath = path.join(ROOT, item.file);
-  if (!fs.existsSync(filePath)) throw new Error(`${item.id}: MP4 file absent`);
-  const bytes = fs.readFileSync(filePath);
-  const hash = videoSha256(bytes);
-  if (hash !== item.file_sha256) throw new Error(`${item.id}: approved MP4 hash has changed`);
-  return { bytes, hash };
-}
-
-function verifyImmutableState(item, state) {
-  if (state.file_sha256 !== item.file_sha256 || state.text_sha256 !== videoSha256(Buffer.from(item.text))) {
-    throw new Error(`${item.id}: video or caption changed after staging. Manual review required.`);
+function verifyMedia(item) {
+  const filename = path.join(ROOT, item.file);
+  if (!fs.existsSync(filename) || videoSha256(fs.readFileSync(filename)) !== item.file_sha256) {
+    throw new Error(`${item.id}: approved MP4 has changed or is missing`);
   }
 }
 
 async function main() {
   const videos = loadVideos();
-  console.log(`SOLAR HOUSE / VK VIDEO: mode=${MODE}; queue=${videos.length}; due=${videosToPost(videos).length}`);
+  console.log(`SOLAR HOUSE / VK VIDEO WALL: mode=${MODE}; approved=${videos.filter(v=>v.status==='approved').length}`);
   if (MODE === 'preview') {
-    for (const item of videos) {
-      const state = readJson(ledgerPath(item.id));
-      console.log(`${item.id}: ${item.status}; upload=${item.upload_not_before}; wall=${item.publish_at}; state=${state?.status ?? 'none'}`);
+    for (const video of videos) {
+      const prep = preparedVideoAttachment(video);
+      console.log(`${video.id}: ${video.status}; staged=${prep.ready}; wall=${readJson(ledgerPath(video.id))?.status ?? 'not-started'}`);
     }
-    console.log('Preview: no network calls, commits or VK publication.');
+    console.log('Preview does not contact VK, change GitHub or publish.');
     return;
   }
-
   if (process.env.GITHUB_ACTIONS !== 'true' || process.env.VK_VIDEO_ENABLED !== 'true' ||
       process.env.VK_PUBLISH_ENABLED !== 'true') {
-    throw new Error('Video live requires GitHub Actions AND VK_VIDEO_ENABLED=true AND VK_PUBLISH_ENABLED=true');
+    throw new Error('Live requires GitHub Actions, VK_VIDEO_ENABLED=true and VK_PUBLISH_ENABLED=true');
   }
   const ref = process.env.GITHUB_REF ?? '';
   if (!/^refs\/heads\/[a-zA-Z0-9._/-]+$/.test(ref)) throw new Error('Invalid GitHub branch');
-  const branch = ref.replace(/^refs\/heads\//, '');
-  const userToken = process.env.VK_VIDEO_USER_TOKEN;
+  const branch = ref.slice('refs/heads/'.length);
   const groupToken = process.env.VK_GROUP_TOKEN;
-  if (!userToken || userToken.length < 20) throw new Error('Missing VK_VIDEO_USER_TOKEN user secret (VK_GROUP_TOKEN is insufficient for video.save)');
-  if (!groupToken || groupToken.length < 20) throw new Error('Missing VK_GROUP_TOKEN group secret');
+  if (!groupToken || groupToken.length < 20) throw new Error('Missing group VK_GROUP_TOKEN secret');
 
-  // A scheduled run does at most one externally significant operation.
-  for (const item of videosToUpload(videos)) {
-    let state = readJson(ledgerPath(item.id));
-    if (state) verifyImmutableState(item, state);
-
-    if (!state) {
-      const { bytes, hash } = bytesAndDigest(item);
-      state = {
-        post_id: item.id,
-        status: 'upload-outcome-uncertain',
-        file_sha256: hash,
-        text_sha256: videoSha256(Buffer.from(item.text)),
-        created_at_utc: new Date().toISOString(),
-      };
-      saveAndPush(state, branch, 'upload-attempt');
-      let prepared;
-      try { prepared = await uploadCommunityVideo({ videoBytes: bytes, title: item.title,
-        description: item.text, userToken }); }
-      catch { throw new Error(`${item.id}: video.upload outcome uncertain. Do NOT retry automatically.`); }
-      state.status = 'uploaded-processing';
-      state.video_attachment = prepared.attachment;
-      state.vk_video_id = String(prepared.videoId);
-      state.uploaded_at_utc = new Date().toISOString();
-      saveAndPush(state, branch, 'uploaded');
-      console.log(`VIDEO_UPLOADED community_video_id=${state.vk_video_id}; waiting for processing`);
-      return;
-    }
-
-    if (state.status === 'uploaded-processing') {
-      // Keep waiting while VK transcodes; don't post an unplayable file.
-      let ready;
-      try { ready = await isCommunityVideoReady({ attachment: state.video_attachment, userToken }); }
-      catch { console.log(`${item.id}: video processing check failed; wait until next run`); continue; }
-      if (!ready) { console.log(`${item.id}: video still processing`); continue; }
-      state.status = 'ready';
-      state.ready_at_utc = new Date().toISOString();
-      saveAndPush(state, branch, 'ready');
-      console.log(`${item.id}: video encoded; wall post will wait until ${item.publish_at}`);
-      return;
-    }
-  }
-
-  for (const item of videosToPost(videos)) {
-    const state = readJson(ledgerPath(item.id));
-    if (!state || state.status === 'uploaded-processing') continue;
-    verifyImmutableState(item, state);
-    if (state.status === 'published') continue;
-    if (state.status !== 'ready') {
-      console.log(`${item.id}: stage=${state.status}; automatic retry BLOCKED`);
+  for (const video of videosToPost(videos)) {
+    const state = readJson(ledgerPath(video.id));
+    if (state?.status === 'published') continue;
+    if (state) {
+      console.log(`${video.id}: prior wall outcome=${state.status}; automatic retry BLOCKED`);
       continue;
     }
-    // Ensure wall publisher never uses bytes or an attachment different from approved file.
-    bytesAndDigest(item);
-    const next = { ...state, status: 'post-outcome-uncertain', post_attempt_at_utc: new Date().toISOString() };
+    const prep = preparedVideoAttachment(video);
+    if (!prep.ready) {
+      console.log(`${video.id}: needs browser staging first; ${prep.reason}`);
+      continue;
+    }
+    verifyMedia(video);
+    const next = {
+      post_id: video.id,
+      status: 'post-outcome-uncertain',
+      video_attachment: prep.attachment,
+      file_sha256: video.file_sha256,
+      caption_sha256: videoSha256(Buffer.from(video.text)),
+      created_at_utc: new Date().toISOString(),
+    };
+    // Durable GitHub journal BEFORE the first wall.post request.
     saveAndPush(next, branch, 'wall-attempt');
-    let published;
-    try { published = await publishVideoWallPost({ attachment: next.video_attachment,
-      message: item.text, id: item.id, groupToken }); }
-    catch { throw new Error(`${item.id}: wall.post outcome uncertain. Do NOT retry automatically.`); }
+    let posted;
+    try { posted = await publishVideoWallPost({
+      attachment: prep.attachment, message: video.text, id: video.id, groupToken,
+    }); }
+    catch { throw new Error(`${video.id}: VK wall outcome uncertain. NEVER automatically resend.`); }
     next.status = 'published';
-    next.vk_post_id = String(published.postId);
-    next.post_url = published.postUrl;
+    next.vk_post_id = String(posted.postId);
+    next.post_url = posted.postUrl;
     next.published_at_utc = new Date().toISOString();
     saveAndPush(next, branch, 'published');
-    console.log(`VIDEO_POST_PUBLISHED ${next.post_url}`);
+    console.log(`VIDEO_POST_PUBLISHED ${posted.postUrl}`);
     return;
   }
-  console.log('No new video action eligible.');
+  console.log('No newly due AND browser-staged videos.');
 }
 
 try { await main(); }
