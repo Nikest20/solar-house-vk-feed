@@ -1,7 +1,10 @@
 {
   "post_id": "solar-house-million-20261118-v2",
-  "status": "post-outcome-uncertain",
+  "status": "published",
   "photo_attachment": "photo-211038294_457240969",
   "message_sha256": "640109d3da67fd04b34561227bfbaf0ef4128bc576247695b1353d99b98a4c6f",
-  "created_at_utc": "2026-11-18T12:20:05.782Z"
+  "created_at_utc": "2026-11-18T12:20:05.782Z",
+  "vk_post_id": "648",
+  "post_url": "https://vk.ru/wall-211038294_648",
+  "published_at_utc": "2026-11-18T12:20:09.568Z"
 }
