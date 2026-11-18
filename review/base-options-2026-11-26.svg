@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151515"/><stop offset="1" stop-color="#292929"/></linearGradient>
+    <pattern id="grain" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".4" fill="#e8e8e8"/></pattern>
+  </defs>
+  <rect width="1080" height="1350" fill="#faf9f5"/>
+  <rect width="1080" height="429" fill="url(#g)"/>
+  <path d="M88 105 L133 56 L180 105 L180 160 L153 160 L153 118 L126 118 L126 160 L88 160 Z" fill="none" stroke="#f4c331" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M99 108 L133 73 L168 108" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  <text x="219" y="111" fill="#ffffff" font-family="DejaVu Sans" font-weight="bold" font-size="53">SOLAR HOUSE</text>
+  <rect x="77" y="219" width="90" height="6" fill="#f4c331"/>
+  <text x="77" y="287" fill="#ffffff" font-family="DejaVu Sans" font-size="44" font-weight="bold">ДОМ, КОТОРЫЙ</text>
+  <text x="77" y="351" fill="#f4c331" font-family="DejaVu Sans" font-size="57" font-weight="bold">ВЫБИРАЕТЕ ВЫ</text>
+  <g>
+    <rect x="70" y="490" rx="27" width="450" height="465" fill="#ffffff"/>
+    <rect x="559" y="490" rx="27" width="450" height="465" fill="#ffffff"/>
+  </g>
+  <circle cx="129" cy="563" r="27" fill="#f4c331"/>
+  <path d="M116 563 L126 573 L143 552" stroke="#212121" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="171" y="576" fill="#1c1c1c" font-family="DejaVu Sans" font-size="30" font-weight="bold">БАЗОВАЯ</text>
+  <text x="107" y="630" fill="#1c1c1c" font-family="DejaVu Sans" font-size="30" font-weight="bold">КОМПЛЕКТАЦИЯ</text>
+  <line x1="105" y1="660" x2="482" y2="660" stroke="#e5e5e5" stroke-width="2"/>
+  <text x="106" y="728" fill="#444444" font-family="DejaVu Sans" font-size="25">Понятный состав</text>
+  <text x="106" y="777" fill="#444444" font-family="DejaVu Sans" font-size="25">работ и материалов</text>
+  <text x="106" y="853" fill="#777777" font-family="DejaVu Sans" font-size="21">Фиксируется в смете</text>
+  <circle cx="618" cy="563" r="27" fill="#f4c331"/>
+  <path d="M605 563 H631 M618 550 V576" stroke="#212121" stroke-width="7" stroke-linecap="round"/>
+  <text x="662" y="576" fill="#1c1c1c" font-family="DejaVu Sans" font-size="29" font-weight="bold">ВАШИ ОПЦИИ</text>
+  <text x="596" y="630" fill="#1c1c1c" font-family="DejaVu Sans" font-size="30" font-weight="bold">И ДОПОЛНЕНИЯ</text>
+  <line x1="594" y1="660" x2="971" y2="660" stroke="#e5e5e5" stroke-width="2"/>
+  <text x="596" y="728" fill="#444444" font-family="DejaVu Sans" font-size="25">Отделка, материалы,</text>
+  <text x="596" y="777" fill="#444444" font-family="DejaVu Sans" font-size="25">индивидуальные решения</text>
+  <text x="596" y="853" fill="#777777" font-family="DejaVu Sans" font-size="21">Выбор — за вами</text>
+  <path d="M133 1160 L340 990 L530 1134 L645 1040 L827 1190 L905 1190" fill="none" stroke="#2e2e2e" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+  <path d="M211 1093 L211 1200 L444 1200 L444 1071 M310 1200 L310 1112 L376 1112 L376 1200" fill="none" stroke="#2e2e2e" stroke-width="11"/>
+  <path d="M574 1136 L574 1200 L782 1200 L782 1166" fill="none" stroke="#2e2e2e" stroke-width="11"/>
+  <rect x="70" y="1250" width="940" height="1" fill="#c8c8c8"/>
+  <text x="80" y="1295" fill="#555555" font-family="DejaVu Sans" font-size="21">Состав и стоимость закрепляются в предложении</text>
+</svg>

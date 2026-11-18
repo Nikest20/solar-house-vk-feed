@@ -55,14 +55,18 @@ try {
       const body = document.body?.innerText || '';
       const links = [...document.querySelectorAll('a[href]')].map(a => a.getAttribute('href') || '')
         .filter(href => href.includes(clipId)).slice(0, 10);
+      const interactive = [...document.querySelectorAll('button,a,[role="tab"],[role="button"],input,select')]
+        .filter(el => el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0)
+        .map(el => (el.getAttribute('aria-label') || el.innerText || el.getAttribute('placeholder') || '').trim().replace(/\s+/g, ' ').slice(0, 80))
+        .filter(Boolean);
       return { text_length: body.length,
         clip_id_in_visible_text: body.includes(clipId),
+        clip_id_in_dom: document.documentElement?.outerHTML?.includes(clipId) || false,
         filename_visible: body.includes('solar-house-terrace-2026-11-19.mp4'),
         matching_clip_links: links.length,
-        visible_buttons: [...document.querySelectorAll('button')]
-          .filter(el => el.getBoundingClientRect().width > 0)
-          .map(el => (el.getAttribute('aria-label') || el.innerText || '').trim().slice(0, 65))
-          .filter(t => /чернов|отлож|клип|видео|создать|добавить/i.test(t)).slice(0, 22),
+        matching_clip_urls: links,
+        visible_actions: [...new Set(interactive)].slice(0, 90),
+        content_excerpt: body.slice(0, 6500),
       };
     }, { clipId }).catch(() => ({ text_length: 0 }));
     const url = new URL(page.url());
@@ -82,14 +86,35 @@ try {
   await page.getByText('Клипы', { exact: true }).first().click({ timeout: 10_000 });
   await page.waitForTimeout(2_500);
   await snapshot('clips');
-  const drafts = page.getByText('Черновики', { exact: true });
-  await drafts.first().waitFor({ state: 'visible', timeout: 12_000 });
-  await drafts.first().click();
+  // The VK Video interface does not consistently display a "Черновики" tab
+  // on the clips listing. Record the actual options instead of failing on a
+  // guessed label. A visible draft filter is safe to open: it does not submit.
+  const possibleFilters = [/^Черновики$/i, /^Черновик$/i, /^Неопубликованные$/i,
+    /^Отложенные$/i, /^Запланированные$/i, /^В ожидании публикации$/i];
+  let clickedFilter = false;
+  for (const filter of possibleFilters) {
+    const loc = page.getByText(filter).first();
+    if (await loc.isVisible().catch(() => false)) {
+      await loc.click({ timeout: 8_000 });
+      await page.waitForTimeout(2_500);
+      await snapshot('clips-filter');
+      result.clicked_filter = String(filter);
+      clickedFilter = true;
+      break;
+    }
+  }
+  if (!clickedFilter) result.note = 'No visible drafts/scheduled filter in the Clips interface; do not infer that the clip is missing.';
+
+  // The ID assigned by the upload form may only exist in a transient session.
+  // Visiting its already-known URL is a read-only availability check.
+  await page.goto(`https://vkvideo.ru/${clipId}`, { waitUntil: 'commit', timeout: 30_000 });
   await page.waitForTimeout(3_000);
-  await snapshot('clips-drafts');
+  await snapshot('direct-clip-link');
+  result.publication_status = 'not-confirmed';
+  result.next_step = 'Review clips.png, direct-clip-link.png and result.json before any repeat upload or publication';
   save();
   console.log(`READ ONLY RESULT: ${path.join(DIAG, 'result.json')}`);
-  console.log('No video file selected; no clip saved, published or deleted.');
+  console.log('No video file selected; no clip saved, published or deleted. Publication is NOT confirmed.');
 } catch (error) {
   result.error = String(error?.message ?? error).slice(0, 220);
   if (page) {
