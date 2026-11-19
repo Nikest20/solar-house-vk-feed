@@ -10,9 +10,6 @@ on:
           - preview
           - live
         default: preview
-  schedule:
-    # At :18 after the wall publisher can publish at :03.
-    - cron: '3,18,33,48 * * * *'
 
 permissions:
   contents: write

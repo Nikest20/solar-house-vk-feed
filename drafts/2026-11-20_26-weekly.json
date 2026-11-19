@@ -2,9 +2,10 @@
   "week_id": "solar-house-vk-2026-11-20_26",
   "version": 1,
   "timezone": "Europe/Moscow",
-  "review_status": "needs_approval",
+  "review_status": "archived",
   "publication_enabled": false,
-  "description": "Редакционный пакет Solar House: 7 дней, 4 поста с изображениями, 3 клипа, 7 историй. Файл не является рабочей очередью.",
+  "description": "АРХИВ первоначальной идеи: 4 поста, 3 клипа, 7 историй. Видео и истории исключены из действующего плана по решению владельца 19.11.2026.",
+  "superseded_by": "drafts/2026-11-20_26-articles-only.json",
   "items": [
     {
       "id": "solar-house-family-home-20261120",

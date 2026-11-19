@@ -1,6 +1,7 @@
 {
   "id": "solar-house-terrace-story-20261119",
-  "status": "approved",
+  "status": "draft",
+  "withdrawn_from_automation_on": "2026-11-19",
   "publish_at": "2026-11-19T10:15:00+03:00",
   "linked_wall_post_id": "solar-house-terrace-20261119",
   "image": "media/solar-house-terrace-story-2026-11-19.jpg",

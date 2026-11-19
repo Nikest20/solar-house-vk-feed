@@ -1,0 +1,16 @@
+{
+  "week_id": "solar-house-vk-2026-11-20_26-articles",
+  "source_file": "drafts/2026-11-20_26-weekly.json",
+  "timezone": "Europe/Moscow",
+  "review_status": "needs_approval",
+  "publication_enabled": false,
+  "video_automation_enabled": false,
+  "stories_enabled": false,
+  "content_policy": "Only articles with static images on the community wall. The owner creates and publishes videos manually when desired.",
+  "post_ids": [
+    "solar-house-family-home-20261120",
+    "solar-house-vapor-barrier-20261122",
+    "solar-house-wood-fibreboard-20261124",
+    "solar-house-base-and-options-20261126"
+  ]
+}

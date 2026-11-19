@@ -1,5 +1,17 @@
 # Solar House — VK cloud publisher (disabled by default)
 
+## Актуальный режим с 19 ноября 2026
+
+**Только статьи с изображениями для стены сообщества.** Автоматическая
+публикация клипов и историй отключена; видео владелец снимает и размещает
+самостоятельно. Первый недельный статический пакет (20, 22, 24, 26 ноября)
+ожидает согласования:
+`review/week-2026-11-20_26/articles-only.md`.
+
+Видеоэксперименты и команды восстановления ниже оставлены исключительно
+для истории. `Stage-VK-Video.ps1 -Upload` и
+`Recover-VK-Terrace-Clip.ps1 -Publish` **не запускать**.
+
 This repository previously hosted a test RSS feed in `feed.xml`. That obsolete
 feed was removed at the owner's request. The current solution uses GitHub
 Actions to publish approved and pre-staged posts directly through the VK API.
@@ -12,8 +24,8 @@ Actions to publish approved and pre-staged posts directly through the VK API.
 - Secret: `VK_GROUP_TOKEN` (GitHub Actions repository secret; never commit a token).
 - Kill switch: `VK_PUBLISH_ENABLED` (GitHub Actions repository **variable**).
 - **Live publication is OFF until `VK_PUBLISH_ENABLED` is explicitly `true`.**
-- There are no approved posts in the public queue. Draft texts and images are
-  deliberately not committed to this public repository.
+- Новый пакет статей не утверждён и отсутствует в рабочей `queue/`;
+  ранее опубликованные записи и журналы сохранены.
 
 ## Test without posting
 

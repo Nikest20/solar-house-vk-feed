@@ -7,9 +7,10 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const w = JSON.parse(fs.readFileSync(path.join(root, 'drafts/2026-11-20_26-weekly.json'), 'utf8'));
 
-test('weekly Solar House package cannot auto-publish without approval', () => {
-  assert.equal(w.review_status, 'needs_approval');
+test('original mixed-media package is archived and cannot auto-publish', () => {
+  assert.equal(w.review_status, 'archived');
   assert.equal(w.publication_enabled, false);
+  assert.equal(w.superseded_by, 'drafts/2026-11-20_26-articles-only.json');
   assert.ok(w.items.every(item => item.status === 'needs_approval'));
 });
 
