@@ -1,0 +1,34 @@
+// Recovery is a separately authorised, one-shot operation after a failed
+// *first* upload. It does not reset or erase the original attempt journal.
+export function verifyTerraceRecoveryEvidence({ originalJournal, originalResult, inspection, expectedSha }) {
+  if (originalJournal.video_id !== 'solar-house-terrace-20261119' ||
+      originalJournal.file_sha256 !== expectedSha ||
+      originalJournal.state !== 'upload-outcome-uncertain') {
+    throw new Error('First upload journal does not match the approved clip');
+  }
+  if (originalResult.video_id !== originalJournal.video_id ||
+      originalResult.file_sha256 !== expectedSha ||
+      !originalResult.selected_file_once ||
+      originalResult.clicked_publish || originalResult.clicked_save || originalResult.clicked_next) {
+    throw new Error('First upload state has changed: stop and review manually');
+  }
+  if (inspection.mode !== 'READ-ONLY' ||
+      inspection.clip_id !== 'clip-211038294_456239559' ||
+      inspection.publication_status !== 'not-confirmed' || inspection.error) {
+    throw new Error('Read-only VK inspection is missing or inconsistent');
+  }
+  const views = Object.fromEntries((inspection.views ?? []).map(view => [view.name, view]));
+  for (const name of ['cabinet', 'clips', 'clips-filter', 'direct-clip-link']) {
+    if (!views[name] || views[name].clip_id_in_dom || views[name].matching_clip_links) {
+      throw new Error(`${name}: VK inspection missing or found the original clip; no repeat allowed`);
+    }
+  }
+  if (!/0\s*клипов/i.test(views['clips-filter'].content_excerpt ?? '')) {
+    throw new Error('Scheduled clips are not confirmed empty');
+  }
+  if (!/17\s*ноября\s*2026/i.test(views.clips.content_excerpt ?? '') ||
+      /Терраса\? Да зачем она нам/i.test(views.clips.content_excerpt ?? '')) {
+    throw new Error('Published clips listing does not match the inspected state');
+  }
+  return { originalClipId: inspection.clip_id, previouslyScheduled: 0 };
+}

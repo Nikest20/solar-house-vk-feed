@@ -82,3 +82,17 @@ First run the preview, make sure a post was approved and the photo uploaded
 in advance, and inspect the queue JSON. Only then create/set repository
 variable `VK_PUBLISH_ENABLED=true` in Settings → Secrets and variables →
 Actions → Variables. Do not enable the variable as part of installation.
+
+## Пропущенный клип 19 ноября — одноразовое восстановление
+
+После `Inspect-VK-Clip-Draft.ps1`, если отчёт подтверждает отсутствие
+публикации и отложенного клипа, можно запустить
+`Recover-VK-Terrace-Clip.ps1` (проверка без изменений). Режим
+`Recover-VK-Terrace-Clip.ps1 -Publish` **один раз** загружает тот же
+одобренный MP4, заполняет подпись, публикует клип и сохраняет снимки
+и журнал в `%LOCALAPPDATA%\SolarHouseVkAuto\video-staging\`.
+
+Не запускать `-Publish` второй раз и не удалять журналы при ошибках.
+Сверить итоговый клип, его появление на главной сообщества и историю:
+VK Видео, стена сообщества и история не являются одной гарантированной
+операцией. Остальные ролики пока требуют отдельной приёмки.
