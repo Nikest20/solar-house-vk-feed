@@ -34,3 +34,21 @@ export function verifyTerraceRecoveryEvidence({ originalJournal, originalResult,
   }
   return { originalClipId: inspection.clip_id, previouslyScheduled: 0 };
 }
+
+// VK Video uses NBSP around many Russian words in the creator editor. Text
+// returned by Playwright.innerText() preserves some of those NBSP characters,
+// even though getByText() treats them as regular spaces.
+export function parsePreparedClipEditor(rawText, filename, previousClipId) {
+  const labels = String(rawText).replace(/\s+/gu, ' ').trim();
+  const required = [
+    'Клип загружен и обработан', filename, 'Сейчас',
+    'Показать на главной сообщества', 'Опубликовать в истории',
+  ];
+  const missing = required.filter(value => !labels.includes(value));
+  if (missing.length) throw new Error(`Clip editor is missing: ${missing.join(', ')}`);
+  const match = labels.match(/https:\/\/vkvideo\.ru\/(clip-211038294_\d{5,})/);
+  if (!match || match[1] === previousClipId) {
+    throw new Error('No NEW community-owned VK Clip ID; stop without publishing');
+  }
+  return { id: match[1], url: match[0] };
+}

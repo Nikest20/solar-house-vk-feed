@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { verifyTerraceRecoveryEvidence } from '../src/clip-recovery-lib.mjs';
+import { verifyTerraceRecoveryEvidence, parsePreparedClipEditor } from '../src/clip-recovery-lib.mjs';
 
 const args = {
   expectedSha: 'abc',
@@ -35,4 +35,19 @@ test('recovery refuses a discovered original clip', () => {
 test('recovery refuses a nonempty scheduled list', () => {
   assert.throws(() => verifyTerraceRecoveryEvidence({ ...args,
     inspection: { ...args.inspection, views: args.inspection.views.map(v => v.name === 'clips-filter' ? { ...v, content_excerpt: '1 клип' } : v) } }), /empty/);
+});
+test('clip editor accepts VK nonbreaking spaces in processed status and settings', () => {
+  const editor = 'Публикация клипа\nКлип загружен и\u00a0обработан\n' +
+    'Когда опубликовать\nСейчас\nПоказать на\u00a0главной сообщества\n' +
+    'Опубликовать в\u00a0истории\nНазвание файла\nsolar-house-terrace-2026-11-19.mp4\n' +
+    'Ссылка на клип\nhttps://vkvideo.ru/clip-211038294_456239560';
+  const clip = parsePreparedClipEditor(editor, 'solar-house-terrace-2026-11-19.mp4', 'clip-211038294_456239559');
+  assert.equal(clip.id, 'clip-211038294_456239560');
+});
+test('clip editor rejects incomplete or old publication forms', () => {
+  assert.throws(() => parsePreparedClipEditor('Публикация клипа', 'file.mp4', 'clip-211038294_456239559'), /missing/);
+  const oldForm = 'Клип загружен и обработан\nКогда опубликовать\nСейчас\n' +
+    'Показать на главной сообщества\nОпубликовать в истории\nfile.mp4\n' +
+    'https://vkvideo.ru/clip-211038294_456239559';
+  assert.throws(() => parsePreparedClipEditor(oldForm, 'file.mp4', 'clip-211038294_456239559'), /No NEW/);
 });

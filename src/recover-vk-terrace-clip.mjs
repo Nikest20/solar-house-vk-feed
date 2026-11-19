@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateVideo, videoSha256 } from './video-cloud-lib.mjs';
-import { verifyTerraceRecoveryEvidence } from './clip-recovery-lib.mjs';
+import { verifyTerraceRecoveryEvidence, parsePreparedClipEditor } from './clip-recovery-lib.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const APP = path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), 'AppData', 'Local'), 'SolarHouseVkAuto');
@@ -155,16 +155,11 @@ try {
   if (entered.trim() !== video.text.trim()) throw new Error('Clip description did not match approved text');
 
   const labels = await editor.innerText();
-  if (!labels.includes('Клип загружен и обработан') || !labels.includes(video.file.split('/').at(-1)) ||
-      !labels.includes('Сейчас') || !labels.includes('Показать на') || !labels.includes('Опубликовать в')) {
-    throw new Error('Clip editor is not in expected processed/instant-publication state');
-  }
-  const match = labels.match(/https:\/\/vkvideo\.ru\/(clip-211038294_\d{5,})/);
-  if (!match || match[1] === inspection.clip_id) {
-    throw new Error('No NEW community-owned VK Clip ID; stop without publishing');
-  }
-  result.new_clip_id = match[1];
-  result.new_clip_url = match[0];
+  result.editor_excerpt = labels.slice(0, 4000);
+  save();
+  const clipLink = parsePreparedClipEditor(labels, video.file.split('/').at(-1), inspection.clip_id);
+  result.new_clip_id = clipLink.id;
+  result.new_clip_url = clipLink.url;
   result.state = 'prepared-before-publish';
   await cabinet.screenshot({ path: path.join(OUTPUT, 'prepared-with-caption.png') });
   save();
