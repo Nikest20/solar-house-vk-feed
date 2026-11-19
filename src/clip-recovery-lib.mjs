@@ -26,7 +26,9 @@ export function verifyTerraceRecoveryEvidence({ originalJournal, originalResult,
   if (!/0\s*клипов/i.test(views['clips-filter'].content_excerpt ?? '')) {
     throw new Error('Scheduled clips are not confirmed empty');
   }
-  if (!/17\s*ноября\s*2026/i.test(views.clips.content_excerpt ?? '') ||
+  // VK abbreviates dates inside the Clips table ("17 нояб 2026") but writes
+  // the full month on its Overview card ("17 ноября 2026"). Both are valid.
+  if (!/17\s*нояб(?:ря)?\s*2026/i.test(views.clips.content_excerpt ?? '') ||
       /Терраса\? Да зачем она нам/i.test(views.clips.content_excerpt ?? '')) {
     throw new Error('Published clips listing does not match the inspected state');
   }

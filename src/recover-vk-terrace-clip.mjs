@@ -95,7 +95,7 @@ try {
   await page.waitForTimeout(2_500);
   const publishedText = await page.locator('body').innerText();
   await page.screenshot({ path: path.join(OUTPUT, 'before-recovery-clips.png') });
-  if (!/135\s*клипов/i.test(publishedText) || !/17\s*ноября\s*2026/i.test(publishedText) ||
+  if (!/135\s*клипов/i.test(publishedText) || !/17\s*нояб(?:ря)?\s*2026/i.test(publishedText) ||
       publishedText.includes(inspection.clip_id) || /Терраса\? Да зачем она нам/i.test(publishedText)) {
     throw new Error('Live clips listing changed since the inspection; check for an existing publication');
   }
