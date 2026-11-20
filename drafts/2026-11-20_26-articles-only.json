@@ -2,7 +2,7 @@
   "week_id": "solar-house-vk-2026-11-20_26-articles",
   "source_file": "drafts/2026-11-20_26-weekly.json",
   "timezone": "Europe/Moscow",
-  "review_status": "needs_approval",
+  "review_status": "partially_approved",
   "publication_enabled": false,
   "video_automation_enabled": false,
   "stories_enabled": false,
@@ -12,5 +12,24 @@
     "solar-house-vapor-barrier-20261122",
     "solar-house-wood-fibreboard-20261124",
     "solar-house-base-and-options-20261126"
-  ]
+  ],
+  "post_review": {
+    "solar-house-family-home-20261120": {
+      "status": "approved",
+      "note": "В queue/2026-11-20-family-home.json; предварительно staged 20.11."
+    },
+    "solar-house-vapor-barrier-20261122": {
+      "status": "needs_video",
+      "note": "Пользователь предоставит видео ошибки пароизоляции; текст уточнить по реальным кадрам перед утверждением."
+    },
+    "solar-house-wood-fibreboard-20261124": {
+      "status": "revised_needs_approval",
+      "note": "Обновлённый текст о 200 мм утеплителя и наружной МДВП находится в review/week-2026-11-20_26/articles-only.md."
+    },
+    "solar-house-base-and-options-20261126": {
+      "status": "approved",
+      "note": "Явно утверждено пользователем 20.11. Требуется подготовка изображения на Windows перед включением в очередь."
+    }
+  },
+  "last_reviewed_at": "2026-11-20"
 }
