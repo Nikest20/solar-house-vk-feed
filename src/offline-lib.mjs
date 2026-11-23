@@ -15,6 +15,9 @@ export function preparedAttachment(post) {
   if (typeof post.staged_image_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(post.staged_image_sha256)) {
     return { ready: false, reason: 'не указан SHA-256 загруженного изображения' };
   }
+  if (post.approved_image_sha256 && post.staged_image_sha256 !== post.approved_image_sha256) {
+    return { ready: false, reason: 'загруженное изображение отличается от утверждённого' };
+  }
   return { ready: true, attachment: post.photo_attachment };
 }
 
