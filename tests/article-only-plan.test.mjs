@@ -9,10 +9,18 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const source = JSON.parse(fs.readFileSync(path.join(root, 'drafts/2026-11-20_26-weekly.json'), 'utf8'));
 const plan = JSON.parse(fs.readFileSync(path.join(root, 'drafts/2026-11-20_26-articles-only.json'), 'utf8'));
 
-test('four articles and zero clips are selected for owner approval', () => {
-  const items = selectArticleOnlyDrafts(source, plan);
-  assert.deepEqual(items.map(x => x.date), ['2026-11-20', '2026-11-22', '2026-11-24', '2026-11-26']);
-  assert.ok(items.every(x => x.format === 'image_post'));
+test('four articles and zero clips are selected across editorial approval states', () => {
+  for (const review_status of ['needs_approval', 'partially_approved', 'approved']) {
+    const items = selectArticleOnlyDrafts(source, { ...plan, review_status });
+    assert.deepEqual(items.map(x => x.date), ['2026-11-20', '2026-11-22', '2026-11-24', '2026-11-26']);
+    assert.ok(items.every(x => x.format === 'image_post'));
+  }
+});
+test('editorial approval never enables publishing, clips, or stories', () => {
+  assert.throws(() => selectArticleOnlyDrafts(source, { ...plan, review_status: 'unknown' }), /editorial review status/);
+  assert.throws(() => selectArticleOnlyDrafts(source, { ...plan, publication_enabled: true }), /non-publishing/);
+  assert.throws(() => selectArticleOnlyDrafts(source, { ...plan, video_automation_enabled: true }), /without video/);
+  assert.throws(() => selectArticleOnlyDrafts(source, { ...plan, stories_enabled: true }), /without video/);
 });
 test('all four pre-existing review images are available', () => {
   const names = ['2026-11-20-family-home.jpg', '2026-11-22-vapor-barrier.jpg',
