@@ -1,9 +1,13 @@
 // Editorial selection for the post-only Solar House schedule. This is NOT the
-// publication queue and must remain unapproved until the owner reviews it.
+// publication queue. Editorial approval may progress while this plan remains
+// non-publishing; only separately approved queue/*.json posts can go live.
 export function selectArticleOnlyDrafts(source, plan) {
-  if (plan.review_status !== 'needs_approval' || plan.publication_enabled !== false ||
+  if (!['needs_approval', 'partially_approved', 'approved'].includes(plan.review_status)) {
+    throw new Error('Unsupported article-only editorial review status');
+  }
+  if (plan.publication_enabled !== false ||
       plan.video_automation_enabled !== false || plan.stories_enabled !== false) {
-    throw new Error('Article-only plan must be unapproved, without video or story automation');
+    throw new Error('Article-only plan must remain non-publishing, without video or story automation');
   }
   if (source.review_status !== 'archived' || source.publication_enabled !== false ||
       source.superseded_by !== 'drafts/2026-11-20_26-articles-only.json') {
