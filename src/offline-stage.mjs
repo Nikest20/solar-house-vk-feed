@@ -124,6 +124,9 @@ async function main() {
       const imagePath = path.join(mediaDir, post.image);
       if (!fs.existsSync(imagePath)) throw new Error(`${post.id}: нет изображения ${post.image} в media`);
       const imageHash = sha256(fs.readFileSync(imagePath));
+      if (post.approved_image_sha256 && post.approved_image_sha256 !== imageHash) {
+        throw new Error(`${post.id}: JPG отличается от утверждённого изображения, загрузка в VK запрещена.`);
+      }
       const digest = contentDigest(post);
       let state = read(post.id);
       if (state && (state.content_sha256 !== digest || state.image_sha256 !== imageHash)) {
